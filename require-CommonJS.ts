@@ -1,15 +1,15 @@
 namespace Require {
 	// Define types:
 		export type Module = {
-			__dirname:string;								// The url location of the folder containing this module (lower case).
-			__filename:string;							// Alias for address.
-			address:string;								// The url location of where this module was resolved to (lower case).
-			definition:string;							// The text content of the module
-			error?:Error;									// If there was an error (probably a 404) loading the module
-			exports:any										// The exports of the module.
-			factory:Factory								// A function used to form the module closure (module.definition.toString())
-			isInitialised:boolean;						// When the module's requirements are loaded, it can be initialised upon first call.
-			type:"node"|"local"|"function";			// "node": sourced from a node_module folder along the caller's lineage; "local": sourced via a file path ('./'. '../', 'http://', etc); "function": defined dynamically.
+			__dirname:string;						// The registered address of the folder containing the module's (lower case).
+			__filename:string;					// Alias for address.
+			address:string;						// The registered address of this module (lower case).
+			definition:string;					// The text of the module's definition.
+			error?:Error;							// Any error loading the module.
+			exports:any								// The exports of the module. This is used for 'this' in binding.
+			factory:Factory						// A function used to form the module closure = factory.toString() = definition.
+			isInitialised:boolean;				// When the all of module's requirements are loaded, it can be initialised upon first call.
+			type:"node"|"local"|"function";	// "node": sourced from a node_module folder along the caller's lineage; "local": sourced via a file path ('./'. '../', 'http://', etc); "function": defined dynamically.
 		};
 
 		export type Factory =	(
