@@ -1,6 +1,7 @@
 /*
 	NodalRequire attempts to mimic some of the environmental behaviours of the CommonJS/Node.js function require.
-	The term 'nodal' is used because it is only node-like and this abstraction does not recreate all of the normal Node.js functionality or behaviours.
+	The term 'nodal' is used because it is only node-like and this abstraction does not recreate all of the 
+	normal Node.js functionality or behaviours.
 
 	FUNCTIONALITY ------------------------------------------------------------------------------------
 	NodalRequire attempts to simply find the module that best matches the path.
@@ -11,60 +12,73 @@
 	The loader address is the address of the page that starts the process.
 
 	The address is formed from 2 parts: 
-		id: as found in require(id) normally; eg require("nodeModule"), require("./localModule"), require("./folder/thisModule"), require("../folder/thisModule")
+		id: as found in require(id) normally; eg require("nodeModule"), require("./localModule"), 
+			require("./folder/thisModule"), require("../folder/thisModule")
 		originAddress: where to start searching for the module.
+		Local modules do not search the lineage and if they are not found, then an error is generated.
 
-	Local modules do not search the lineage and if they are not found, then an error is generated.
-
-	Functional modules are given a function programmatically and an id and originAddress that resolves to an address, which forms the moduleRegistry index.
-	This means that functional modules are able to overwrite existing modules or be formed abstractly without loading a local file.
-	If a new entry overwrites an existing registration, then it does not disconnect the current references from previously executed require() statements,
-	and so this behaviour can lead to inconsistent effects.
+	Functional modules are given a function programmatically and an id and originAddress that resolves to an '
+	address, which forms the moduleRegistry index.
+	This means that functional modules are able to overwrite existing modules or be formed abstractly without 
+	loading a local file.
+	If a new entry overwrites an existing registration, then it does not disconnect the current references from 
+	previously executed require() statements, and so this behaviour can lead to inconsistent effects.
 
 	Nodal modules are searched from the resolved paths 
 		1. "originAddress/id/../node_modules/id.js"
 		2. "originAddress/id/../../node_modules/id.js"
 		3. keep ascending the lineage until there is no more lineage.
-	This is slightly more generous than Node.js, which does not usually search the immediate folder but instead starts with the parent folder (ie step 2).
+	This is slightly more generous than Node.js, which does not usually search the immediate folder but instead 
+	starts with the parent folder (ie step 2).
 	When a match is found, all previous search paths are aliased to it to avoid having to search those paths again.
 	This means that a node module can have multiple registry entries that all reference the final module registration.
 
 	INSTALLATION -----------------------------------------------------------------------------------
 	Install NodalRequire.js in a reachable path from your HTML document.
 	Include code like this in the HTML header BEFORE calling ANY scripts that rely on require(): 
+
 		<script src="{pathFromHtmlDoc}/NodalRequire.js" data-main=startModuleId></script>
 		eg <script src="scripts/NodalRequire.js" data-main="./modules/main"></script>
+
 	Here startModuleId is relative to the HTML document (the loader) and NOT NodalRequire.js.
 		eg startModuleId = "./main".
 
 	USAGE ------------------------------------------------------------------------------------------
-	When the script tag is processed, it will hand control over to NodalRequire.js, which will attempt to load startModuleId as its first module.
+	When the script tag is processed, it will hand control over to NodalRequire.js, which will attempt to load 
+	startModuleId as its first module.
 	All code that needs require() should be launched out of this start module.
-	If you dynamically load in new code at later that needs require(), just use code like this to create a handover:
+	If you dynamically load in new code later that needs require(), just use code like this to create a handover:
+
 		NodalRequire.requireAsync({
 			id:%some id%,
 			originAddress:%some absolute address or relative to loader%,
 			doAsResponse:%some callback%
 		});
+
 	eg
+
 		NodalRequire.requireAsync({
 			id:"./myModule",
 			originAddress:"",
 			doAsResponse:cb
 		});
 
-	This will execute the required module after all of its dependencies are loaded, and optionally callback to the calling script.
+	This will execute the required module after all of its dependencies are loaded, and optionally callback to 
+	the calling script.
 
 	PRELOADING ---------------------------------------------------------------------------------------
-	There is no support for programmatic preloading currently (ie NodalRequire.preLoad), which would load a module but not execute it.
+	There is no support for programmatic preloading currently (ie NodalRequire.preLoad), which would load a 
+	module but not execute it.
 	You can achieve this effect by simply noting these modules in the start module somewhere.
 
 	CACHING ------------------------------------------------------------------------------------------
 	You can influence (but not completely control) module browser caching by setting NodalRequire.cachingFrequency:
 		""|"auto": This does not include a search string in the load request and leaves the behaviour to the browser.
 		"never": This includes a different random search string in the load request to help avoid any browser caching.
-		"minutely"|"hourly"|"daily": This changed the search string in the load request by rounding down the current time to help avoid any browser caching.
-	Using a time factor can help to ensure that new module definitions are used more often, but that near-recurrent visits don't have a load impost.
+		"minutely"|"hourly"|"daily": This changed the search string in the load request by rounding down the current 
+			time to help avoid any browser caching.
+	Using a time factor can help to ensure that new module definitions are used more often, but that near-recurrent 
+	visits don't have a load impost.
 
 	CODE STYLE ---------------------------------------------------------------------------------------
 	NodalRequire is written in TypeScript and transpiled into JavaScript.
@@ -75,7 +89,7 @@
 	LICENCE ------------------------------------------------------------------------------------------
 	This code is freeware. You may use it in your projects and reuse it as you please,
 	as long as you accept that there is no liability accepted by myself or the publisher for its effects.
-	If you do not accept this condition, then don't use it and pay a programmer for their work. 
+	If you do not accept this condition, then don't use it and instead pay a programmer for their work. 
 */
 
 namespace NodalRequire {
@@ -98,7 +112,7 @@ namespace NodalRequire {
 			module:Module, 
 			__filename:string, 
 			__dirname:string
-		)=>any;
+		)=>void;
 
 	// Define types:
 		type ModuleRegistry = {
@@ -110,7 +124,6 @@ namespace NodalRequire {
 		var baseElement:HTMLBaseElement = void 0; // This is used for address resolution.
 		var baseScriptTag:HTMLElement = void 0; // This is used for address resolution.
 		var doAsResponse:Function = void 0; // This is set by requireAsync and is executed after all requirements are loaded, then cleared.
-		var globalEval:(script:string)=>any = void 0; // This ensures that the evaludation of the module definition is in the global context.
 		var hostAddress:string = ""; // The address of the host of the HTML page that called requireAsync.
 		var loaderAddress:string = ""; // The address of the HTML page that called requireAsync.
 		var mainScriptAddress:string = ""; // This is set in the HTML page: eg <script src="scripts/require-CommonJS.js" data-main="./modules/main"></script>
@@ -127,7 +140,6 @@ namespace NodalRequire {
 	// Initialise variables:
 		queue = [];
 		moduleRegistry = <ModuleRegistry>{};
-		globalEval = eval; 
 		loaderAddress = window.location.protocol + "//" + window.location.host + window.location.pathname.slice(0, window.location.pathname.lastIndexOf("/"));
 		hostAddress = window.location.protocol + "//" + window.location.host;
 
@@ -416,11 +428,10 @@ namespace NodalRequire {
 				// Enclosing in brackets to ensure that a function is returned.
 				// Catch syntax errors: eg function(...){do(); } doAgain();}:
 					try {
-						// Form the factory globally (if eval were used, then initialiseModule would be used as the evaluation context):
-							module.factory = globalEval(
-								"(function (require, exports, module, __filename, __dirname) {" 
-								+ module.definition 
-								+ "\n}) // source: " + module.address
+						// Form the factory globally:
+							module.factory = <Factory>new Function (
+								"require", "exports", "module", "__filename", "__dirname",
+								module.definition 
 							);
 
 						// Catch evaluation errors (eg 1 = 2; Globa.somthing.othr = 5):
@@ -581,7 +592,7 @@ namespace NodalRequire {
 			
 		// Initilise variables:
 			id = parameters.id;
-			originAddress = parameters.originAddress || "";
+			originAddress = parameters.originAddress || loaderAddress;
 			baseAddress = baseElement.href;
 
 		// If there is no id, then return null:
