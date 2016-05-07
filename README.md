@@ -23,9 +23,9 @@ originAddress: where to start searching for the module.
 * If a new entry overwrites an existing registration, then it does not disconnect the current references from previously executed require() statements, and so this behaviour can lead to inconsistent effects.
 
 * Nodal modules are searched from the resolved paths 
-1. "originAddress/id/../node_modules/id.js"
-2. "originAddress/id/../../node_modules/id.js"
-3. keep ascending the lineage until there is no more lineage.
+  1. "originAddress/id/../node_modules/id.js"
+  2. "originAddress/id/../../node_modules/id.js"
+  3. keep ascending the lineage until there is no more lineage.
 
 * This is slightly more generous than Node.js, which does not usually search the immediate folder but instead starts with the parent folder (ie step 2).
 * When a match is found, all previous search paths are aliased to it to avoid having to search those paths again.
@@ -68,9 +68,9 @@ NodalRequire.requireAsync({
 
 ######CACHING ------------------------------------------------------------------------------------------
 * You can influence (but not completely control) module browser caching by setting NodalRequire.cachingFrequency:
-1. ""|"auto": This does not include a search string in the load request and leaves the behaviour to the browser.
-2. "never": This includes a different random search string in the load request to help avoid any browser caching.
-3. "minutely"|"hourly"|"daily": This changed the search string in the load request by rounding down the current time to help avoid any browser caching.
+  1. ""|"auto": This does not include a search string in the load request and leaves the behaviour to the browser.
+  2. "never": This includes a different random search string in the load request to help avoid any browser caching.
+  3. "minutely"|"hourly"|"daily": This changed the search string in the load request by rounding down the current time to help avoid any browser caching.
 * Using a time factor can help to ensure that new module definitions are used more often, but that near-recurrent visits don't have a load impost.
 
 ######CODE STYLE ---------------------------------------------------------------------------------------
