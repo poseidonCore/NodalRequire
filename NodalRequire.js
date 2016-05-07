@@ -150,7 +150,7 @@ var NodalRequire;
         moduleOriginAddress = originAddress;
         moduleAddress = resolveAddress({ originAddress: originAddress, id: id });
         // Initialise variables:
-        if (typeof parameters.factory == "functional" && parameters.factory != null) {
+        if (typeof parameters.factory == "function" && parameters.factory != null) {
             // Get the exports from the supplied factory:
             requireFromFactory({
                 id: id,
@@ -188,8 +188,10 @@ var NodalRequire;
         }
         // Resolve the address:
         address = resolveAddress({ id: id, originAddress: originAddress });
-        // If the module is already inloadQueue, then abort:
-        if (queue.indexOf(address) >= 0) {
+        // If the module is already in the queue or registered, then abort:
+        if (queue.indexOf(address) >= 0 // Already queued.
+            || moduleRegistry[address] != null // Already registered.
+        ) {
             // Check the queue:
             checkQueue();
             // Abort:
@@ -401,7 +403,7 @@ var NodalRequire;
         // Register this module:
         moduleRegistry[address] = module;
         // Execute the responseFunction:
-        if (typeof doAsResponse == "functional" && doAsResponse != null)
+        if (typeof doAsResponse == "function" && doAsResponse != null)
             setTimeout(doAsResponse, 10, [{ module: module, id: moduleId }]);
         // Clear the current module details:
         moduleId = "";
@@ -419,7 +421,7 @@ var NodalRequire;
             // Initialise variables:
             module = moduleRegistry[moduleAddress];
             // Execute the responseFunction:
-            if (typeof doAsResponse == "functional" && doAsResponse != null)
+            if (typeof doAsResponse == "function" && doAsResponse != null)
                 setTimeout(doAsResponse, 10, [{ module: module, id: moduleId }]);
             // Clear the current module details:
             moduleId = "";
