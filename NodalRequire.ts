@@ -314,7 +314,7 @@ namespace NodalRequire {
 					// Check the load queue:
 						checkQueue();
 				} 
-			// Otherwise alert and abort:
+			// Otherwise process the error:
 				else {
 					processError(event);
 				}
