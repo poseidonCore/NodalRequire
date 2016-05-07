@@ -2,12 +2,12 @@ NodalRequire attempts to mimic some of the environmental behaviours of the Commo
 The term 'nodal' is used because it is only node-like and this abstraction does not recreate all of the 
 normal Node.js functionality or behaviours.
 
-FUNCTIONALITY ------------------------------------------------------------------------------------
+#####FUNCTIONALITY ------------------------------------------------------------------------------------
 NodalRequire attempts to simply find the module that best matches the path.
 Modules with a relative address starting with an alphanumeric are considered to be node modules.
 Modules with a relative address starting with ./ are search from the origin address folder.
 Modules with a relative address starting with ../ are search from the origin address parent folder.
-##### TODO: Modules with a relative address starting with / are searched from the loader folder. #####
+[##### TODO: Modules with a relative address starting with / are searched from the loader folder. #####]
 The loader address is the address of the page that starts the process.
 
 The address is formed from 2 parts: 
