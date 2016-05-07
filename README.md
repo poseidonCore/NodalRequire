@@ -23,9 +23,9 @@ originAddress: where to start searching for the module.
 * If a new entry overwrites an existing registration, then it does not disconnect the current references from previously executed require() statements, and so this behaviour can lead to inconsistent effects.
 
 * Nodal modules are searched from the resolved paths 
- 1. "originAddress/id/../node_modules/id.js"
- 2. "originAddress/id/../../node_modules/id.js"
- 3. keep ascending the lineage until there is no more lineage.
+  * "originAddress/id/../node_modules/id.js"
+  * "originAddress/id/../../node_modules/id.js"
+  * keep ascending the lineage until there is no more lineage.
 
 * This is slightly more generous than Node.js, which does not usually search the immediate folder but instead starts with the parent folder (ie step 2).
 * When a match is found, all previous search paths are aliased to it to avoid having to search those paths again.
