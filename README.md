@@ -44,7 +44,7 @@ eg <script src="scripts/NodalRequire.js" data-main="./modules/main"></script>
 ######USAGE ------------------------------------------------------------------------------------------
 * When the script tag is processed, it will hand control over to NodalRequire.js, which will attempt to load startModuleId as its first module.
 * All code that needs require() should be launched out of this start module.
-* If you dynamically load in new code at later that needs require(), just use code like this to create a handover:
+* If you dynamically load in new code later that needs require(), just use code like this to create a handover:
 ```
 NodalRequire.requireAsync({
 	id:%some id%,
