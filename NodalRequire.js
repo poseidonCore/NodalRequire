@@ -15,8 +15,7 @@
         id: as found in require(id) normally; eg require("nodeModule"), require("./localModule"),
             require("./folder/thisModule"), require("../folder/thisModule")
         originAddress: where to start searching for the module.
-
-    Local modules do not search the lineage and if they are not found, then an error is generated.
+        Local modules do not search the lineage and if they are not found, then an error is generated.
 
     Functional modules are given a function programmatically and an id and originAddress that resolves to an '
     address, which forms the moduleRegistry index.
@@ -37,8 +36,10 @@
     INSTALLATION -----------------------------------------------------------------------------------
     Install NodalRequire.js in a reachable path from your HTML document.
     Include code like this in the HTML header BEFORE calling ANY scripts that rely on require():
+
         <script src="{pathFromHtmlDoc}/NodalRequire.js" data-main=startModuleId></script>
         eg <script src="scripts/NodalRequire.js" data-main="./modules/main"></script>
+
     Here startModuleId is relative to the HTML document (the loader) and NOT NodalRequire.js.
         eg startModuleId = "./main".
 
@@ -46,13 +47,16 @@
     When the script tag is processed, it will hand control over to NodalRequire.js, which will attempt to load
     startModuleId as its first module.
     All code that needs require() should be launched out of this start module.
-    If you dynamically load in new code at later that needs require(), just use code like this to create a handover:
+    If you dynamically load in new code later that needs require(), just use code like this to create a handover:
+
         NodalRequire.requireAsync({
             id:%some id%,
             originAddress:%some absolute address or relative to loader%,
             doAsResponse:%some callback%
         });
+
     eg
+
         NodalRequire.requireAsync({
             id:"./myModule",
             originAddress:"",
@@ -94,7 +98,6 @@ var NodalRequire;
     var baseElement = void 0; // This is used for address resolution.
     var baseScriptTag = void 0; // This is used for address resolution.
     var doAsResponse = void 0; // This is set by requireAsync and is executed after all requirements are loaded, then cleared.
-    var globalEval = void 0; // This ensures that the evaludation of the module definition is in the global context.
     var hostAddress = ""; // The address of the host of the HTML page that called requireAsync.
     var loaderAddress = ""; // The address of the HTML page that called requireAsync.
     var mainScriptAddress = ""; // This is set in the HTML page: eg <script src="scripts/require-CommonJS.js" data-main="./modules/main"></script>
@@ -109,7 +112,6 @@ var NodalRequire;
     // Initialise variables:
     queue = [];
     moduleRegistry = {};
-    globalEval = eval;
     loaderAddress = window.location.protocol + "//" + window.location.host + window.location.pathname.slice(0, window.location.pathname.lastIndexOf("/"));
     hostAddress = window.location.protocol + "//" + window.location.host;
     // Create HTML elements to use in finding absolute addresses:
@@ -345,10 +347,8 @@ var NodalRequire;
             // Enclosing in brackets to ensure that a function is returned.
             // Catch syntax errors: eg function(...){do(); } doAgain();}:
             try {
-                // Form the factory globally (if eval were used, then initialiseModule would be used as the evaluation context):
-                module.factory = globalEval("(function (require, exports, module, __filename, __dirname) {"
-                    + module.definition
-                    + "\n}) // source: " + module.address);
+                // Form the factory globally:
+                module.factory = new Function("require", "exports", "module", "__filename", "__dirname", module.definition);
                 // Catch evaluation errors (eg 1 = 2; Globa.somthing.othr = 5):
                 try {
                     // Execute the module:
@@ -468,7 +468,7 @@ var NodalRequire;
         var originAddress = "";
         // Initilise variables:
         id = parameters.id;
-        originAddress = parameters.originAddress || "";
+        originAddress = parameters.originAddress || loaderAddress;
         baseAddress = baseElement.href;
         // If there is no id, then return null:
         if (typeof id != "string" || id == null)
