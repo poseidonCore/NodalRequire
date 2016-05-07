@@ -150,12 +150,12 @@ var NodalRequire;
         moduleOriginAddress = originAddress;
         moduleAddress = resolveAddress({ originAddress: originAddress, id: id });
         // Initialise variables:
-        if (typeof parameters.factory == "function" && parameters.factory != null) {
-            // Get the exports from the supplied factory:
-            requireFromFactory({
+        if (typeof parameters.definition == "string" && parameters.definition != null) {
+            // Get the exports by forming a module from the supplied definition:
+            requireFromDefinition({
                 id: id,
                 originAddress: originAddress,
-                factory: parameters.factory
+                definition: parameters.definition
             });
         }
         else {
@@ -197,14 +197,15 @@ var NodalRequire;
             // Abort:
             return;
         }
-        // Add the module to the queue and register it:
+        // Add the module to the queue and register it or update its alias:
         queue.push(address);
         module = parameters.aliasRegistration || {};
+        module.isInitialised = false;
         module.exports = {};
         module.address = address;
         module.__filename = address;
         module.__dirname = address.slice(0, module.address.lastIndexOf("/"));
-        module.type = id[0] == "." || id.slice(0, 7) == "http://" || id.slice(0, 8) == "https://"
+        module.type = id[0] == "." || id[0] == "/" || id.slice(0, 7) == "http://" || id.slice(0, 8) == "https://"
             ? "local"
             : "nodal";
         moduleRegistry[address] = module;
@@ -269,14 +270,18 @@ var NodalRequire;
                 // Remove this module from the queue:
                 queueIndex = queue.indexOf(module.address);
                 queue.splice(queueIndex, 1);
-                // Check the load queue:
+                // Check the queue:
                 checkQueue();
             }
             else {
+                // Process this as an error:
                 processError(event);
             }
         }
         function processError(event) {
+            // ##### TODO: Some errors may be comm problems (security, etc) and these should force a halt after retrying, as opposed to false failures. #####
+            // ##### NOTE: queueRequirements creates false failures when finding patters in comments and string literals that look like modules requirements. #####
+            // ##### NOTE: Some failures must be tolerated for nodal modules because searching the lineage can result in loading errors. #####
             // Declare variables:
             var newAddress = "";
             var queueIndex = 0;
@@ -289,9 +294,14 @@ var NodalRequire;
             if (module.type != "nodal" // Local modules do not search lineage.
                 || newAddress == address // We have run out of lineage.
             ) {
-                // Store the error, alert, and abort:
+                // ##### NOTE: Because queueRequirements can give false failures, we can't halt on failures. #####
+                // ##### TODO: When queueRequirements no longer gives false failures, allow progression on failure (ie non-strict) to be an option. #####
+                // Store the error, alert:
                 module.error = new Error("NodalRequire.requireFromAddress.processError: (HTTP status " + request.status + ") Can't find module:\n" + module.address);
                 window.alert(module.error.message);
+                // Check the queue:
+                checkQueue();
+                // Abort:
                 return;
             }
             // Use the current module registration as the new registration:
@@ -346,15 +356,14 @@ var NodalRequire;
         module = parameters.module;
         // Initialise the module only if necessary:
         if (!module.isInitialised) {
-            // Enclosing in brackets to ensure that a function is returned.
             // Catch syntax errors: eg function(...){do(); } doAgain();}:
             try {
-                // Form the factory globally:
-                module.factory = new Function("require", "exports", "module", "__filename", "__dirname", module.definition);
+                // Form the constructor globally:
+                module.constructor = new Function("require", "exports", "module", "__filename", "__dirname", module.definition);
                 // Catch evaluation errors (eg 1 = 2; Globa.somthing.othr = 5):
                 try {
                     // Execute the module:
-                    module.factory.apply(module.exports, [
+                    module.constructor.apply(module.exports, [
                         require,
                         module.exports,
                         module,
@@ -382,37 +391,36 @@ var NodalRequire;
         }
     }
     // ---------- ---------- ----------
-    function requireFromFactory(parameters) {
+    function requireFromDefinition(parameters) {
         /*
-            This currently assumes that the factory is fully resolved and already has required any requirements.
-            Therefore, it will return synchronously and not add to the queue.
+            This currently assumes that the definition might not be fully resolved and may have unfetched requirements.
+            Therefore, it will return asynchronously, but the passed module will not add to the queue
+            because its definition is passed.
         */
         // Declare variables:
         var address = "";
         var module = void 0;
-        // Initialise variables:
+        // Resolve the address:
         address = resolveAddress({ id: parameters.id, originAddress: parameters.originAddress });
-        module = {};
         // Create the module:
+        module = {};
+        module.isInitialised = false;
         module.address = address;
         module.__filename = address;
         module.__dirname = address.slice(0, module.address.lastIndexOf("/"));
         module.type = "functional";
         module.exports = {};
-        module.factory = parameters.factory;
+        module.definition = parameters.definition;
         // Register this module:
         moduleRegistry[address] = module;
-        // Execute the responseFunction:
-        if (typeof doAsResponse == "function" && doAsResponse != null)
-            setTimeout(doAsResponse, 10, [{ module: module, id: moduleId }]);
-        // Clear the current module details:
-        moduleId = "";
-        moduleAddress = "";
-        doAsResponse = null;
-        // Initialised the module:
-        initialiseModule({ module: module });
+        // Queue any requirements:
+        queueRequirements({
+            definition: module.definition,
+            originAddress: address.slice(0, address.lastIndexOf("/"))
+        });
+        // Check the queue:
+        checkQueue();
     }
-    NodalRequire.requireFromFactory = requireFromFactory;
     // ---------- ---------- ----------
     function checkQueue() {
         // Declare variables:
@@ -445,7 +453,9 @@ var NodalRequire;
         // initialise variables:
         definition = parameters.definition;
         originAddress = parameters.originAddress;
-        // Get all of the requirements:		
+        // Get all of the requirements:
+        // ##### NOTE: This will find require statements in comments and string literals too, which may lead to false failures. #####
+        // ##### TODO: Strip a copy of the definition of string literals and comments beforehand and use it for searching. #####
         definition.replace(/(?:^|[^\w\$_.])require\s*\(\s*["']([^"']*)["']\s*\)/g, function (substring, id) {
             requirements.push(id);
             return id;
@@ -453,7 +463,7 @@ var NodalRequire;
         // If there are no matches, then abort:
         if (requirements.length == 0)
             return;
-        // Queue all of the requirements:
+        // Queue all of the requirements (requireFromAddress will weed out duplicates and currently queued requests):
         requirements.forEach(function (value, index, array) {
             requireFromAddress({
                 id: value,
@@ -463,6 +473,12 @@ var NodalRequire;
     }
     // ---------- ---------- ----------
     function resolveAddress(parameters) {
+        /*
+            ##### TODO: When id begins with '//' then the address should resolve against hostAddress (protocol + domain + port). #####
+            ##### TODO: When id begins with '/' then the address should resolve against loaderAddress. #####
+            ##### TODO: Consider whether the name of the module should have case preserved, and just the path lower-cased. #####
+            This assumes that the id does not end with .js already, even when starting with a protocol (http:// or https://).
+        */
         // Declare variables:
         var address = "";
         var baseAddress = "";
@@ -471,30 +487,36 @@ var NodalRequire;
         // Initilise variables:
         id = parameters.id;
         originAddress = parameters.originAddress || loaderAddress;
-        baseAddress = baseElement.href;
-        // If there is no id, then return null:
-        if (typeof id != "string" || id == null)
-            return null;
+        // If there is no id, then alert and abort:
+        if (typeof id != "string" || id == null) {
+            // Alert and abort:
+            window.alert("NodalRequire.resolveAddress: No id was passed.");
+            return;
+        }
         // If id is fully resolved, then return it as the address:
         if (id.slice(0, 7) == "http://" || id.slice(0, 8) == "https://") {
             // Return the address:
-            return id.toLocaleLowerCase();
+            return id.toLowerCase() + ".js";
         }
-        // If id is in originAddress, then reform it:
+        // If id is in originAddress folder, then reform it:
         if (id.slice(0, 2) == "./") {
+            // Remove the leading "./":
             id = id.slice(2);
         }
-        else if (id.slice(0, 3) != "../") {
+        else if (id[0] != "." && id[0] != "/") {
+            // Prefix id with "node_modules/" to search in ascending node_modules folders:
+            // ##### NOTE: Node generally would do "../node_modules/" unless this is the top level. 
+            // The following approach is used for consistency and ease given that 'top level' is ambiguous. #####
             id = "node_modules/" + id;
         }
-        // Use id relative to the origin address:
+        // Get the browser to return id relative to the origin address:
         baseAddress = baseElement.href;
         baseElement.href = originAddress;
         relativeElement.href = originAddress + "/" + id + ".js";
         address = relativeElement.href;
         baseElement.href = baseAddress;
         // Return the address:
-        return address.toLocaleLowerCase();
+        return address.toLowerCase();
     }
     NodalRequire.resolveAddress = resolveAddress;
 })(NodalRequire || (NodalRequire = {}));

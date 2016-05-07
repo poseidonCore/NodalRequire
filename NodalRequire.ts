@@ -92,35 +92,50 @@
 	If you do not accept this condition, then don't use it and instead pay a programmer for their work. 
 */
 
+// Patch NodeSelector with missing properties:
+	interface NodeSelector {
+		querySelector(selectors:string): HTMLElement;
+		querySelectorAll(selectors:string): NodeListOf<HTMLElement>;
+	}
+
 namespace NodalRequire {
 	// Define types:
 		export type Module = {
 			__dirname:string; // The registered address of the folder containing the module's (lower case).
 			__filename:string; // Alias for address.
 			address:string; // The registered address of this module (lower case).
-			definition:string; // The text of the module's definition.
+			definition:string; // The bare text of the module's definition, without the surrounding functional decoration that is added to form the constructor.
 			error?:Error; // Any error loading the module.
-			exports:any; // The exports of the module. This is used for 'this' in binding.
-			factory:Factory; // A function used to form the module closure = factory.toString() = definition.
+			exports:ModuleExports; // The exports of the module. This is used for 'this' in binding.
+			constructor:ModuleConstructor; // A function used to form the module closure: constructor = new Function(..., definition).
 			isInitialised:boolean; // When the all of module's requirements are loaded, it can be initialised upon first call.
-			type:"nodal"|"local"|"functional"; // "nodal": sourced from a node_module folder along the caller's lineage; "local": sourced via a file path ('./'. '../', 'http://', etc); "functional": defined dynamically.
+			type:ModuleType; // "nodal": sourced from a node_module folder along the caller's lineage; "local": sourced via a file path ('./'. '../', 'http://', etc); "functional": defined dynamically.
 		};
 
-		export type Factory = (
-			require:(id:string)=>any, 
-			exports:any, 
+		export type ModuleConstructor = (
+			require:ModuleRequirer, 
+			exports:ModuleExports, 
 			module:Module, 
 			__filename:string, 
 			__dirname:string
 		)=>void;
 
-	// Define types:
-		type ModuleRegistry = {
+		export type ModuleRegistry = {
 			[index:string]:Module;
 		};
 
+		export type ModuleExports = {
+			[index:string]:any;
+		};
+
+		export type ModuleType = "nodal"|"local"|"functional";
+
+		export type ModuleCachingFrequency = ""|"auto"|"never"|"minutely"|"hourly"|"daily";
+
+		export type ModuleRequirer = (id:string)=>any;
+
 	// Define variables:
-		export var cachingFrequency:""|"auto"|"never"|"minutely"|"hourly"|"daily" = ""; // How the caching string is formed. "auto"|"" imply no caching intervention.
+		export var cachingFrequency:ModuleCachingFrequency = ""; // How the caching string is formed. "auto"|"" imply no caching intervention.
 		var baseElement:HTMLBaseElement = void 0; // This is used for address resolution.
 		var baseScriptTag:HTMLElement = void 0; // This is used for address resolution.
 		var doAsResponse:Function = void 0; // This is set by requireAsync and is executed after all requirements are loaded, then cleared.
@@ -159,7 +174,7 @@ namespace NodalRequire {
 
 	export function requireAsync (parameters:{
 		doAsResponse?:(parameters:{module?:Module, id:string})=>void;
-		factory?:Factory;
+		definition?:string;
 		id:string;
 		originAddress?:string;
 	}):any {
@@ -191,12 +206,12 @@ namespace NodalRequire {
 			moduleAddress = resolveAddress({originAddress:originAddress, id:id});
 
 		// Initialise variables:
-			if (typeof parameters.factory == "function" && parameters.factory != null) {
-				// Get the exports from the supplied factory:
-					requireFromFactory({
+			if (typeof parameters.definition == "string" && parameters.definition != null) {
+				// Get the exports by forming a module from the supplied definition:
+					requireFromDefinition({
 						id:id,
 						originAddress:originAddress,
-						factory:parameters.factory
+						definition:parameters.definition
 					});
 			} else {
 					requireFromAddress({
@@ -250,14 +265,15 @@ namespace NodalRequire {
 					return;
 			}
 
-		// Add the module to the queue and register it:
+		// Add the module to the queue and register it or update its alias:
 			queue.push(address);
 			module = parameters.aliasRegistration || <Module>{}; 
-			module.exports = {};
+			module.isInitialised = false;
+			module.exports = <ModuleExports>{};
 			module.address = address;
 			module.__filename = address;
 			module.__dirname = address.slice(0, module.address.lastIndexOf("/"));
-			module.type = id[0] == "." || id.slice(0, 7) == "http://" || id.slice(0, 8) == "https://"
+			module.type = id[0] == "." || id[0] == "/" || id.slice(0, 7) == "http://" || id.slice(0, 8) == "https://"
 				? "local"
 				: "nodal"
 			moduleRegistry[address] = module;
@@ -326,16 +342,21 @@ namespace NodalRequire {
 						queueIndex = queue.indexOf(module.address);
 						queue.splice(queueIndex, 1);
 
-					// Check the load queue:
+					// Check the queue:
 						checkQueue();
 				} 
-			// Otherwise process the error:
+			// Else the comm may have worked but the file may have not been found:
 				else {
-					processError(event);
+					// Process this as an error:
+						processError(event);
 				}
 		}
 
 		function processError (event:Event):void {
+			// ##### TODO: Some errors may be comm problems (security, etc) and these should force a halt after retrying, as opposed to false failures. #####
+			// ##### NOTE: queueRequirements creates false failures when finding patters in comments and string literals that look like modules requirements. #####
+			// ##### NOTE: Some failures must be tolerated for nodal modules because searching the lineage can result in loading errors. #####
+
 			// Declare variables:
 				var newAddress:string = "";
 				var queueIndex:number = 0;
@@ -352,9 +373,16 @@ namespace NodalRequire {
 					module.type != "nodal" // Local modules do not search lineage.
 					|| newAddress == address // We have run out of lineage.
 				) {
-					// Store the error, alert, and abort:
+					// ##### NOTE: Because queueRequirements can give false failures, we can't halt on failures. #####
+					// ##### TODO: When queueRequirements no longer gives false failures, allow progression on failure (ie non-strict) to be an option. #####
+					// Store the error, alert:
 						module.error = new Error("NodalRequire.requireFromAddress.processError: (HTTP status " + request.status + ") Can't find module:\n" + module.address);
 						window.alert(module.error.message);
+
+					// Check the queue:
+						checkQueue();
+
+					// Abort:
 						return;
 				}
 
@@ -372,7 +400,7 @@ namespace NodalRequire {
 	function requireFromRegistry (parameters:{
 		id:string;
 		originAddress:string;
-	}):any {
+	}):ModuleExports {
 		/*
 			This assumes that the modules have all been registered for a relevant module.
 			Modules may be called at different points but resolve to the same registration if they are found in the lineage of node_modules.
@@ -428,11 +456,10 @@ namespace NodalRequire {
 
 		// Initialise the module only if necessary:
 			if (!module.isInitialised) {
-				// Enclosing in brackets to ensure that a function is returned.
 				// Catch syntax errors: eg function(...){do(); } doAgain();}:
 					try {
-						// Form the factory globally:
-							module.factory = <Factory>new Function (
+						// Form the constructor globally:
+							module.constructor = <ModuleConstructor>new Function(
 								"require", "exports", "module", "__filename", "__dirname",
 								module.definition 
 							);
@@ -440,7 +467,7 @@ namespace NodalRequire {
 						// Catch evaluation errors (eg 1 = 2; Globa.somthing.othr = 5):
 							try {
 								// Execute the module:
-									module.factory.apply(
+									module.constructor.apply(
 										module.exports,
 										[
 											require,
@@ -474,45 +501,45 @@ namespace NodalRequire {
 
 	// ---------- ---------- ----------
 
-	export function requireFromFactory (parameters:{
+	function requireFromDefinition (parameters:{
 		id:string;
-		factory:Factory;
+		definition:string;
 		originAddress?:string;
 	}):void {
 		/*
-			This currently assumes that the factory is fully resolved and already has required any requirements.
-			Therefore, it will return synchronously and not add to the queue.
+			This currently assumes that the definition might not be fully resolved and may have unfetched requirements.
+			Therefore, it will return asynchronously, but the passed module will not add to the queue
+			because its definition is passed.
 		*/
 
 		// Declare variables:
 			var address:string = "";
 			var module:Module = void 0;
 
-		// Initialise variables:
+		// Resolve the address:
 			address = resolveAddress({id:parameters.id, originAddress:parameters.originAddress});
-			module = <Module>{};
 
 		// Create the module:
+			module = <Module>{};
+			module.isInitialised = false;
 			module.address = address;
 			module.__filename = address;
 			module.__dirname = address.slice(0, module.address.lastIndexOf("/"));
 			module.type = "functional";
-			module.exports = {};
-			module.factory = parameters.factory;
+			module.exports = <ModuleExports>{};
+			module.definition = parameters.definition;
 
 		// Register this module:
 			moduleRegistry[address] = module;
 
-		// Execute the responseFunction:
-			if (typeof doAsResponse == "function" && doAsResponse != null) setTimeout(doAsResponse, 10, [{module:module, id:moduleId}]);
+		// Queue any requirements:
+			queueRequirements({
+				definition:module.definition,
+				originAddress:address.slice(0, address.lastIndexOf("/"))
+			});
 
-		// Clear the current module details:
-			moduleId = "";
-			moduleAddress = "";
-			doAsResponse = null;
-
-		// Initialised the module:
-			initialiseModule({module:module});
+		// Check the queue:
+			checkQueue();
 	}
 
 	// ---------- ---------- ----------
@@ -543,7 +570,7 @@ namespace NodalRequire {
 	function queueRequirements (parameters:{
 		definition:string;
 		originAddress:string;
-	}) {
+	}):void {
 		// Declare variables:
 			var definition:string = "";
 			var originAddress:string = "";
@@ -557,7 +584,9 @@ namespace NodalRequire {
 			definition = parameters.definition;
 			originAddress = parameters.originAddress;
 
-		// Get all of the requirements:		
+		// Get all of the requirements:
+		// ##### NOTE: This will find require statements in comments and string literals too, which may lead to false failures. #####
+		// ##### TODO: Strip a copy of the definition of string literals and comments beforehand and use it for searching. #####
 			definition.replace(
 				/(?:^|[^\w\$_.])require\s*\(\s*["']([^"']*)["']\s*\)/g, 
 				function (substring:string, id:string) {
@@ -569,7 +598,7 @@ namespace NodalRequire {
 		// If there are no matches, then abort:
 			if (requirements.length == 0) return;
 
-		// Queue all of the requirements:
+		// Queue all of the requirements (requireFromAddress will weed out duplicates and currently queued requests):
 			requirements.forEach(
 				function (value:string, index:number, array:string[]) {
 					requireFromAddress({
@@ -585,8 +614,15 @@ namespace NodalRequire {
 
 	export function resolveAddress (parameters:{
 		id:string; 
-		originAddress:string;
+		originAddress?:string;
 	}):string {
+		/*
+			##### TODO: When id begins with '//' then the address should resolve against hostAddress (protocol + domain + port). #####
+			##### TODO: When id begins with '/' then the address should resolve against loaderAddress. #####
+			##### TODO: Consider whether the name of the module should have case preserved, and just the path lower-cased. #####
+			This assumes that the id does not end with .js already, even when starting with a protocol (http:// or https://).
+		*/
+
 		// Declare variables:
 			var address:string = "";
 			var baseAddress:string = "";
@@ -596,27 +632,34 @@ namespace NodalRequire {
 		// Initilise variables:
 			id = parameters.id;
 			originAddress = parameters.originAddress || loaderAddress;
-			baseAddress = baseElement.href;
 
-		// If there is no id, then return null:
-			if (typeof id != "string" || id == null) return null;
-			
+		// If there is no id, then alert and abort:
+			if (typeof id != "string" || id == null) {
+				// Alert and abort:
+					window.alert("NodalRequire.resolveAddress: No id was passed."); 
+					return;
+			}
+
 		// If id is fully resolved, then return it as the address:
 			if (id.slice(0, 7) == "http://" || id.slice(0, 8) == "https://") {
 				// Return the address:
-					return id.toLocaleLowerCase();
+					return id.toLowerCase() + ".js";
 			} 
 
-		// If id is in originAddress, then reform it:
+		// If id is in originAddress folder, then reform it:
 			if (id.slice(0, 2) == "./") {
-				id = id.slice(2);
+				// Remove the leading "./":
+					id = id.slice(2);
 			} 
-		// If id is a node module, then look for it in node_modules:
-			else if (id.slice(0, 3) != "../") {
-				id = "node_modules/" + id;
+		// Else if id is a node module, then look for it in node_modules:
+			else if (id[0] != "." && id[0] != "/") {
+				// Prefix id with "node_modules/" to search in ascending node_modules folders:
+				// ##### NOTE: Node generally would do "../node_modules/" unless this is the top level. 
+				// The following approach is used for consistency and ease given that 'top level' is ambiguous. #####
+					id = "node_modules/" + id;
 			}
 
-		// Use id relative to the origin address:
+		// Get the browser to return id relative to the origin address:
 			baseAddress = baseElement.href;
 			baseElement.href = originAddress;
 			relativeElement.href = originAddress + "/" + id + ".js";
@@ -624,6 +667,6 @@ namespace NodalRequire {
 			baseElement.href = baseAddress;
 
 		// Return the address:
-			return address.toLocaleLowerCase();
+			return address.toLowerCase();
 	}
 }
