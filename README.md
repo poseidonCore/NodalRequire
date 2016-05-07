@@ -5,29 +5,24 @@ normal Node.js functionality or behaviours.
 
 ######FUNCTIONALITY ------------------------------------------------------------------------------------
 NodalRequire attempts to simply find the module that best matches the path.
-
 Modules with a relative address starting with an alphanumeric are considered to be node modules.
-
 Modules with a relative address starting with ./ are search from the origin address folder.
-
 Modules with a relative address starting with ../ are search from the origin address parent folder.
-
 TODO: Modules with a relative address starting with / are searched from the loader folder.
-
 The loader address is the address of the page that starts the process.
 
-The address is formed from 2 parts: 
-	id: as found in require(id) normally; eg require("nodeModule"), require("./localModule"), 
-		require("./folder/thisModule"), require("../folder/thisModule")
-		
+The address is formed from 2 parts:
+	id: as found in require(id) normally; eg require("nodeModule"), require("./localModule"), require("./folder/thisModule"), require("../folder/thisModule")
 	originAddress: where to start searching for the module.
 
 Local modules do not search the lineage and if they are not found, then an error is generated.
 
 Functional modules are given a function programmatically and an id and originAddress that resolves to an '
 address, which forms the moduleRegistry index.
+
 This means that functional modules are able to overwrite existing modules or be formed abstractly without 
 loading a local file.
+
 If a new entry overwrites an existing registration, then it does not disconnect the current references from 
 previously executed require() statements, and so this behaviour can lead to inconsistent effects.
 
