@@ -68,9 +68,9 @@ NodalRequire.requireAsync({
 
 ######CACHING ------------------------------------------------------------------------------------------
 * You can influence (but not completely control) module browser caching by setting NodalRequire.cachingFrequency:
-  1. ""|"auto": This does not include a search string in the load request and leaves the behaviour to the browser.
-  2. "never": This includes a different random search string in the load request to help avoid any browser caching.
-  3. "minutely"|"hourly"|"daily": This changed the search string in the load request by rounding down the current time to help avoid any browser caching.
+  * ""|"auto": This does not include a search string in the load request and leaves the behaviour to the browser.
+  * "never": This includes a different random search string in the load request to help avoid any browser caching.
+  * "minutely"|"hourly"|"daily": This changed the search string in the load request by rounding down the current time to help avoid any browser caching.
 * Using a time factor can help to ensure that new module definitions are used more often, but that near-recurrent visits don't have a load impost.
 
 ######CODE STYLE ---------------------------------------------------------------------------------------
