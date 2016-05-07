@@ -1,4 +1,4 @@
-**NodalRequire** attempts to mimic some of the environmental behaviours of the **CommonJS**/**Node.js** function require.
+**NodalRequire** attempts to mimic some of the environmental behaviours of the **CommonJS**/**Node.js** function `require`.
 The term 'nodal' is used because it is only node-like and this abstraction does not recreate all of the 
 normal Node.js functionality or behaviours.  
 
