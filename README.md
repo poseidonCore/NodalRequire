@@ -9,7 +9,6 @@ Modules with a relative address starting with ./ are search from the origin addr
 Modules with a relative address starting with ../ are search from the origin address parent folder.
 [##### TODO: Modules with a relative address starting with / are searched from the loader folder. #####]
 The loader address is the address of the page that starts the process.
-
 The address is formed from 2 parts: 
 ```
 	id: as found in require(id) normally; eg require("nodeModule"), require("./localModule"), 
