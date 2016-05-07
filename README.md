@@ -20,7 +20,8 @@ Local modules do not search the lineage and if they are not found, then an error
 
 Functional modules are given a function programmatically and an id and originAddress that resolves to an '
 address, which forms the moduleRegistry index.
-This means that functional modules are able to overwrite existing modules or be formed abstractly without loading a local file.
+This means that functional modules are able to overwrite existing modules or be formed abstractly without 
+loading a local file.
 If a new entry overwrites an existing registration, then it does not disconnect the current references from 
 previously executed require() statements, and so this behaviour can lead to inconsistent effects.
 
