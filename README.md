@@ -77,5 +77,5 @@ NodalRequire attempts to mimic some of the environmental behaviours of the Commo
 	LICENCE ------------------------------------------------------------------------------------------
 	This code is freeware. You may use it in your projects and reuse it as you please,
 	as long as you accept that there is no liability accepted by myself or the publisher for its effects.
-	If you do not accept this condition, then don't use it and pay a programmer for their work. 
+	If you do not accept this condition, then don't use it and instead pay a programmer for their work. 
 </pre>
