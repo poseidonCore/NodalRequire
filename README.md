@@ -22,8 +22,8 @@ This means that functional modules are able to overwrite existing modules or be 
 If a new entry overwrites an existing registration, then it does not disconnect the current references from previously executed require() statements, and so this behaviour can lead to inconsistent effects.  
 
 Nodal modules are searched from the resolved paths   
-* "originAddress/id/../node_modules/id.js"  
-* "originAddress/id/../../node_modules/id.js"  
+* `originAddress/id/../node_modules/id.js`  
+* `originAddress/id/../../node_modules/id.js`  
 * keep ascending the lineage until there is no more lineage.  
 
 This is slightly more generous than Node.js, which does not usually search the immediate folder but instead starts with the parent folder (ie step 2).  
@@ -33,7 +33,7 @@ This means that a node module can have multiple registry entries that all refere
 ***  
 ######INSTALLATION  
 Install `NodalRequire.js` in a reachable path from your HTML document.  
-Include code like this in the HTML header BEFORE calling ANY scripts that rely on require():   
+Include code like this in the HTML header BEFORE calling ANY scripts that rely on `require()`:   
    `<script src="{pathFromHtmlDoc}/NodalRequire.js" data-main=startModuleId></script>`  
 eg  
    `<script src="scripts/NodalRequire.js" data-main="./modules/main"></script>`  
@@ -46,7 +46,7 @@ eg
 ######USAGE  
 When the script tag is processed, it will hand control over to `NodalRequire.js`, which will attempt to load startModuleId as its first module.  
 All code that needs require() should be launched out of this start module.  
-If you dynamically load in new code later that needs require(), just use code like this to create a handover:  
+If you dynamically load in new code later that needs `require()`, just use code like this to create a handover:  
 ```
 NodalRequire.requireAsync({  
 	id:%some id%,  
@@ -74,7 +74,7 @@ You can achieve this effect by simply noting these modules in the start module s
 You can influence (but not completely control) module browser caching by setting `NodalRequire.cachingFrequency`:  
 * `""|"auto"`: This does not include a search string in the load request and leaves the behaviour to the browser.  
 * `"never"`: This includes a different random search string in the load request to help avoid any browser caching.  
-* `"minutely"|"hourly"|"daily"`: This changed the search string in the load request by rounding down the current time to help avoid any browser caching.  
+* `"minutely"|"hourly"|"daily"`: This changes the search string in the load request by rounding down the current time to help avoid any browser caching.  
 Using a time factor can help to ensure that new module definitions are used more often, but that near-recurrent visits don't have a load impost.  
 
 ***  
