@@ -1,5 +1,6 @@
 # NodalRequire
 <strong>Browser-side version of CommonJS</strong>
+<pre>
 NodalRequire attempts to mimic some of the environmental behaviours of the CommonJS/Node.js function require.
 	The term 'nodal' is used because it is only node-like and this abstraction does not recreate all of the normal Node.js functionality or behaviours.
 
@@ -77,3 +78,4 @@ NodalRequire attempts to mimic some of the environmental behaviours of the Commo
 	This code is freeware. You may use it in your projects and reuse it as you please,
 	as long as you accept that there is no liability accepted by myself or the publisher for its effects.
 	If you do not accept this condition, then don't use it and pay a programmer for their work. 
+</pre>
