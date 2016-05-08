@@ -109,7 +109,7 @@ namespace NodalRequire {
 			exports:ModuleExports; // The exports of the module. This is used for 'this' in binding.
 			constructor:ModuleConstructor; // A function used to form the module closure: constructor = new Function(..., definition).
 			isInitialised:boolean; // When the all of module's requirements are loaded, it can be initialised upon first call.
-			type:ModuleType; // "nodal": sourced from a node_module folder along the caller's lineage; "local": sourced via a file path ('./'. '../', 'http://', etc); "functional": defined dynamically.
+			type:ModuleType; // "node": sourced from a node_module folder along the caller's lineage; "local": sourced via a file path ('./'. '../', 'http://', etc); "dynamic": defined dynamically.
 		};
 
 		export type ModuleConstructor = (
@@ -128,7 +128,7 @@ namespace NodalRequire {
 			[index:string]:any;
 		};
 
-		export type ModuleType = "nodal"|"local"|"functional";
+		export type ModuleType = "node"|"local"|"dynamic";
 
 		export type ModuleCachingFrequency = ""|"auto"|"never"|"minutely"|"hourly"|"daily";
 
@@ -275,7 +275,7 @@ namespace NodalRequire {
 			module.__dirname = address.slice(0, module.address.lastIndexOf("/"));
 			module.type = id[0] == "." || id[0] == "/" || id.slice(0, 7) == "http://" || id.slice(0, 8) == "https://"
 				? "local"
-				: "nodal"
+				: "node"
 			moduleRegistry[address] = module;
 
 		// Create the module loader:
@@ -370,7 +370,7 @@ namespace NodalRequire {
 
 			// If this is not a node module, then alert and abort:
 				if (
-					module.type != "nodal" // Local modules do not search lineage.
+					module.type != "node" // Local modules do not search lineage.
 					|| newAddress == address // We have run out of lineage.
 				) {
 					// ##### NOTE: Because queueRequirements can give false failures, we can't halt on failures. #####
@@ -525,7 +525,7 @@ namespace NodalRequire {
 			module.address = address;
 			module.__filename = address;
 			module.__dirname = address.slice(0, module.address.lastIndexOf("/"));
-			module.type = "functional";
+			module.type = "dynamic";
 			module.exports = <ModuleExports>{};
 			module.definition = parameters.definition;
 

@@ -207,7 +207,7 @@ var NodalRequire;
         module.__dirname = address.slice(0, module.address.lastIndexOf("/"));
         module.type = id[0] == "." || id[0] == "/" || id.slice(0, 7) == "http://" || id.slice(0, 8) == "https://"
             ? "local"
-            : "nodal";
+            : "node";
         moduleRegistry[address] = module;
         // Create the module loader:
         request = new XMLHttpRequest();
@@ -291,7 +291,7 @@ var NodalRequire;
             // Form the parent address:
             newAddress = resolveAddress({ id: id, originAddress: originAddress + "/.." });
             // If this is not a node module, then alert and abort:
-            if (module.type != "nodal" // Local modules do not search lineage.
+            if (module.type != "node" // Local modules do not search lineage.
                 || newAddress == address // We have run out of lineage.
             ) {
                 // ##### NOTE: Because queueRequirements can give false failures, we can't halt on failures. #####
@@ -408,7 +408,7 @@ var NodalRequire;
         module.address = address;
         module.__filename = address;
         module.__dirname = address.slice(0, module.address.lastIndexOf("/"));
-        module.type = "functional";
+        module.type = "dynamic";
         module.exports = {};
         module.definition = parameters.definition;
         // Register this module:

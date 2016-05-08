@@ -21,7 +21,7 @@ declare namespace NodalRequire {
     type ModuleExports = {
         [index: string]: any;
     };
-    type ModuleType = "nodal" | "local" | "functional";
+    type ModuleType = "node" | "local" | "dynamic";
     type ModuleCachingFrequency = "" | "auto" | "never" | "minutely" | "hourly" | "daily";
     type ModuleRequirer = (id: string) => any;
     var cachingFrequency: ModuleCachingFrequency;
