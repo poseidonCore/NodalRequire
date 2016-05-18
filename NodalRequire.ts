@@ -164,7 +164,8 @@ namespace NodalRequire {
 		document.head.appendChild(baseElement);
 			
 	// Get mainScriptAddress:
-		baseScriptTag = document.querySelector("script[data-main]"); // TODO: This accidentally select same property from another script tag. //
+	// ##### TODO: This can accidentally selects the same property from another script tag. #####
+		baseScriptTag = document.querySelector("script[data-main]"); 
 		if (baseScriptTag) {
 			mainScriptAddress = baseScriptTag.dataset["main"];
 			requireAsync({id:mainScriptAddress, originAddress:loaderAddress});
